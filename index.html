@@ -20,6 +20,17 @@
       max-width: 300px;
       line-height: 1.5;
     }
+    .skills {
+      position: absolute;
+      top: 160px;
+      left: 20px;
+      line-height: 1.5;
+    }
+    .skill-label {
+      position: absolute;
+      left: 0;
+      margin-bottom: 20px;
+    }
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -36,6 +47,7 @@
     <p><strong>Experience:</strong> 18 years crafting scalable React applications and leading development teams.</p>
     <p>Passionate about building performant user interfaces and exploring the latest in web technologies.</p>
   </div>
+  <div class="skills" id="skills"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
     const scene = new THREE.Scene();
@@ -44,17 +56,40 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshNormalMaterial();
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
+    camera.position.set(0, 0, 5);
 
-    camera.position.z = 5;
+    const skillsData = [
+      { name: 'JavaScript', years: 6 },
+      { name: 'React', years: 5 },
+      { name: 'Node.js', years: 4 },
+      { name: 'CSS', years: 7 }
+    ];
+
+    const radius = 0.1;
+    const spacing = 0.6;
+    const scale = 0.4; // length per year
+
+    const skillsContainer = document.getElementById('skills');
+
+    skillsData.forEach((skill, index) => {
+      const length = skill.years * scale;
+      const geometry = new THREE.CylinderGeometry(radius, radius, length, 32);
+      const material = new THREE.MeshNormalMaterial();
+      const bar = new THREE.Mesh(geometry, material);
+      bar.rotation.z = Math.PI / 2;
+      bar.position.y = -index * spacing;
+      bar.position.x = length / 2;
+      scene.add(bar);
+
+      const label = document.createElement('div');
+      label.className = 'skill-label';
+      label.textContent = `${skill.name} - ${skill.years} yrs`;
+      label.style.top = `${index * 20}px`;
+      skillsContainer.appendChild(label);
+    });
 
     function animate() {
       requestAnimationFrame(animate);
-      cube.rotation.x += 0.01;
-      cube.rotation.y += 0.01;
       renderer.render(scene, camera);
     }
     animate();
