@@ -15,93 +15,147 @@
     canvas {
       display: block;
     }
-  </style>
-</head>
-<body>
-  <!-- All content will be rendered inside the canvas using Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script>
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    camera.position.set(0, 0, 5);
-
-    function createTextSprite(message, opts = {}) {
-      const { color = '#fff', font = '24px Arial' } = opts;
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      ctx.font = font;
-      const metrics = ctx.measureText(message);
-      const textWidth = Math.ceil(metrics.width);
-      const textHeight = Math.ceil(parseInt(font, 10) * 1.2);
-      canvas.width = textWidth;
-      canvas.height = textHeight;
-      ctx.font = font;
-      ctx.fillStyle = color;
-      ctx.fillText(message, 0, textHeight * 0.8);
-      const texture = new THREE.CanvasTexture(canvas);
-      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
-      const sprite = new THREE.Sprite(material);
-      sprite.scale.set(textWidth / 100, textHeight / 100, 1);
-      return sprite;
-    }
-
-    const profileLines = [
-      'React Architect',
-      'Name: Jane Doe',
-      'Experience: 18 years crafting scalable React applications and leading development teams.',
-      'Passionate about building performant user interfaces and exploring the latest in web technologies.'
-    ];
-
-    let profileY = 2;
-    profileLines.forEach((line, i) => {
-      const font = i === 0 ? '30px Arial' : '20px Arial';
-      const sprite = createTextSprite(line, { font });
-      sprite.position.set(-2, profileY, 0);
-      profileY -= 0.4;
-      scene.add(sprite);
-    });
-
-    const skillsData = [
-      { name: 'JavaScript', years: 6 },
-      { name: 'React', years: 5 },
-      { name: 'Node.js', years: 4 },
-      { name: 'CSS', years: 7 }
-    ];
-
-    const radius = 0.1;
-    const spacing = 0.6;
-    const scale = 0.4; // length per year
-
-    skillsData.forEach((skill, index) => {
-      const length = skill.years * scale;
-      const geometry = new THREE.CylinderGeometry(radius, radius, length, 32);
-      const material = new THREE.MeshNormalMaterial();
-      const bar = new THREE.Mesh(geometry, material);
-      bar.rotation.z = Math.PI / 2;
-      bar.position.y = -index * spacing - 1;
-      bar.position.x = length / 2;
-      scene.add(bar);
-
-      const label = createTextSprite(`${skill.name} - ${skill.years} yrs`, { font: '20px Arial' });
-      label.position.set(-1.5, -index * spacing - 1, 0);
-      scene.add(label);
-    });
-
-    function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
+    </style>
+  </head>
+  <body>
+    <!-- All content will be rendered inside the canvas using Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+      document.body.appendChild(renderer.domElement);
+
+      camera.position.set(0, 0, 5);
+
+      function createWrappedTextSprite(message, opts = {}) {
+        const {
+          color = '#fff',
+          font = '24px Arial',
+          maxWidth = 300
+        } = opts;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.font = font;
+        ctx.fillStyle = color;
+        ctx.textBaseline = 'top';
+
+        const words = message.split(' ');
+        const lineHeight = parseInt(font, 10) * 1.2;
+        let line = '';
+        const lines = [];
+
+        words.forEach(word => {
+          const test = line + word + ' ';
+          if (ctx.measureText(test).width > maxWidth && line !== '') {
+            lines.push(line);
+            line = word + ' ';
+          } else {
+            line = test;
+          }
+        });
+        lines.push(line);
+
+        const textWidth = maxWidth;
+        const textHeight = lines.length * lineHeight;
+        canvas.width = textWidth;
+        canvas.height = textHeight;
+        ctx.font = font;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        lines.forEach((ln, i) => {
+          ctx.fillText(ln.trim(), 0, i * lineHeight);
+        });
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(textWidth / 100, textHeight / 100, 1);
+        sprite.userData = { message, opts: { color, font, maxWidth }, lineHeight: textHeight / 100 };
+        return sprite;
+      }
+
+      function maxTextWidth() {
+        return Math.min(window.innerWidth - 40, 300);
+      }
+
+      let profileSprites = [];
+      let skillSprites = [];
+
+      function renderProfile() {
+        profileSprites.forEach(s => scene.remove(s));
+        profileSprites = [];
+        let profileY = 2;
+        profileLines.forEach((line, i) => {
+          const font = i === 0 ? '30px Arial' : '20px Arial';
+          const sprite = createWrappedTextSprite(line, { font, maxWidth: maxTextWidth() });
+          sprite.position.set(-2, profileY, 0);
+          profileY -= sprite.userData.lineHeight + 0.1;
+          scene.add(sprite);
+          profileSprites.push(sprite);
+        });
+      }
+
+      function renderSkills() {
+        skillSprites.forEach(s => scene.remove(s));
+        skillSprites = [];
+        skillsData.forEach((skill, index) => {
+          const label = createWrappedTextSprite(`${skill.name} - ${skill.years} yrs`, { font: '20px Arial', maxWidth: maxTextWidth() });
+          label.position.set(-1.5, -index * spacing - 1, 0);
+          scene.add(label);
+          skillSprites.push(label);
+        });
+      }
+
+      const profileLines = [
+        'React Architect',
+        'Name: Jane Doe',
+        'Experience: 18 years crafting scalable React applications and leading development teams.',
+        'Passionate about building performant user interfaces and exploring the latest in web technologies.'
+      ];
+
+      const skillsData = [
+        { name: 'JavaScript', years: 6 },
+        { name: 'React', years: 5 },
+        { name: 'Node.js', years: 4 },
+        { name: 'CSS', years: 7 }
+      ];
+
+      const radius = 0.1;
+      const spacing = 0.6;
+      const scale = 0.4; // length per year
+
+      skillsData.forEach((skill, index) => {
+        const length = skill.years * scale;
+        const geometry = new THREE.CylinderGeometry(radius, radius, length, 32);
+        const material = new THREE.MeshNormalMaterial();
+        const bar = new THREE.Mesh(geometry, material);
+        bar.rotation.z = Math.PI / 2;
+        bar.position.y = -index * spacing - 1;
+        bar.position.x = length / 2;
+        scene.add(bar);
+      });
+
+      renderProfile();
+      renderSkills();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderProfile();
+        renderSkills();
+      });
   </script>
 </body>
 </html>
