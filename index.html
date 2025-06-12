@@ -12,42 +12,13 @@
       color: #fff;
       overflow: hidden;
     }
-    .profile {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      animation: fadeIn 2s ease-in-out;
-      max-width: 300px;
-      line-height: 1.5;
-    }
-    .skills {
-      position: absolute;
-      top: 160px;
-      left: 20px;
-      line-height: 1.5;
-    }
-    .skill-label {
-      position: absolute;
-      left: 0;
-      margin-bottom: 20px;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
     canvas {
       display: block;
     }
   </style>
 </head>
 <body>
-  <div class="profile">
-    <h1>React Architect</h1>
-    <p><strong>Name:</strong> Jane Doe</p>
-    <p><strong>Experience:</strong> 18 years crafting scalable React applications and leading development teams.</p>
-    <p>Passionate about building performant user interfaces and exploring the latest in web technologies.</p>
-  </div>
-  <div class="skills" id="skills"></div>
+  <!-- All content will be rendered inside the canvas using Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
     const scene = new THREE.Scene();
@@ -57,6 +28,42 @@
     document.body.appendChild(renderer.domElement);
 
     camera.position.set(0, 0, 5);
+
+    function createTextSprite(message, opts = {}) {
+      const { color = '#fff', font = '24px Arial' } = opts;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = font;
+      const metrics = ctx.measureText(message);
+      const textWidth = Math.ceil(metrics.width);
+      const textHeight = Math.ceil(parseInt(font, 10) * 1.2);
+      canvas.width = textWidth;
+      canvas.height = textHeight;
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.fillText(message, 0, textHeight * 0.8);
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(textWidth / 100, textHeight / 100, 1);
+      return sprite;
+    }
+
+    const profileLines = [
+      'React Architect',
+      'Name: Jane Doe',
+      'Experience: 18 years crafting scalable React applications and leading development teams.',
+      'Passionate about building performant user interfaces and exploring the latest in web technologies.'
+    ];
+
+    let profileY = 2;
+    profileLines.forEach((line, i) => {
+      const font = i === 0 ? '30px Arial' : '20px Arial';
+      const sprite = createTextSprite(line, { font });
+      sprite.position.set(-2, profileY, 0);
+      profileY -= 0.4;
+      scene.add(sprite);
+    });
 
     const skillsData = [
       { name: 'JavaScript', years: 6 },
@@ -69,23 +76,19 @@
     const spacing = 0.6;
     const scale = 0.4; // length per year
 
-    const skillsContainer = document.getElementById('skills');
-
     skillsData.forEach((skill, index) => {
       const length = skill.years * scale;
       const geometry = new THREE.CylinderGeometry(radius, radius, length, 32);
       const material = new THREE.MeshNormalMaterial();
       const bar = new THREE.Mesh(geometry, material);
       bar.rotation.z = Math.PI / 2;
-      bar.position.y = -index * spacing;
+      bar.position.y = -index * spacing - 1;
       bar.position.x = length / 2;
       scene.add(bar);
 
-      const label = document.createElement('div');
-      label.className = 'skill-label';
-      label.textContent = `${skill.name} - ${skill.years} yrs`;
-      label.style.top = `${index * 20}px`;
-      skillsContainer.appendChild(label);
+      const label = createTextSprite(`${skill.name} - ${skill.years} yrs`, { font: '20px Arial' });
+      label.position.set(-1.5, -index * spacing - 1, 0);
+      scene.add(label);
     });
 
     function animate() {
